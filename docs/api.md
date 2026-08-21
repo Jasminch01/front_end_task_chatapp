@@ -52,7 +52,19 @@
 ### System
 
 #### `GET /health`
+Check health of the API. public - no token required.
+**Request**
+No parameters, no body.
 
+**Response**
+```
+{
+  "status": "ok"
+}
+```
+
+**Notes**
+This endpoint is not under `/api`. The api documentation shows the base URL as `{baseurl/api}`. But the currect endpoint is `{baseurl/health}`. So the actual endpoint is `{baseurl/health}`.
 ## Realtime (Socket.IO)
 
 ### Connection
