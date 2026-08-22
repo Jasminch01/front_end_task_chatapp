@@ -662,24 +662,99 @@ The socket is on the root of the host, not on `/api`. Socket.io serves itself at
 io("https://frontend-task-chatapp.onrender.com", { auth: { token } });
 ```
 
-The token goes in the handshake. A missing or bad token is rejected.
+The token goes in the handshake and it is really checked. A garbage token is refused with
+`Invalid token` and no token at all is refused with `No token provided`, both as a
+`connect_error`.
+
+Postman can not test socket.io, its websocket client speaks plain websocket and socket.io
+puts its own handshake on top. So i tested this part with a small node script using
+`socket.io-client`, two and three users connected at the same time.
 
 ### Events
 
 | Direction | Event | Payload |
 | --- | --- | --- |
-| client → server | `message:send` | `{ conversationId, text }`, ack callback is optional |
-| server → client | `message:new` | a new message for me |
-| server → client | `conversation:updated` | a group i am in changed |
+| client → server | `message:send` | `{ conversationId, text }`, ack optional |
+| server → client | `message:new` | a new message in any conversation i am in |
+| server → client | `conversation:updated` | a group i am in was created or changed |
 
-**Not tested yet.** Postman can not test socket.io properly, its websocket client speaks
-plain websocket and socket.io has its own handshake on top. What is still open:
+#### `message:new`
 
-- does the sender also get his own `message:new` back
-- what the ack of `message:send` returns
-- does `message:new` fire for conversations that are not open right now
-- is `conversation:updated` the whole conversation or a delta
-- does the server replay anything after a reconnect
+```json
+{
+  "id": "6a892050e5d6aac97526b7dc",
+  "conversation": "6a892047e5d6aac97526b774",
+  "sender": "6a891845e5d6aac9752667b0",
+  "text": "group msg",
+  "createdAt": 1787371600116
+}
+```
+
+**The socket message is not the same shape as the REST message.** This is the biggest
+thing i found in the whole api. Same message, two transports:
+
+| | REST | socket |
+| --- | --- | --- |
+| id field | `_id` | `id` |
+| `createdAt` | `"2026-08-22T04:06:45.319Z"` | `1787371605319` |
+
+So merging the socket message into the list by `_id` silently fails, because a socket
+message has no `_id`, and sorting by `createdAt` compares a string against a number. In
+the client i normalise every message at the boundary, `id ?? _id` and `createdAt` always
+turned into a Date, before anything else touches it.
+
+#### Who gets `message:new`
+
+- **The sender does not get an echo.** i sent from A with both A and B connected and only
+  B received `message:new`. So my optimistic message is only ever confirmed by the http
+  response, never by an event, and there is no risk of the same message arriving twice.
+- Events are **per user, not per conversation**. There is no join or subscribe event, i
+  never told the server which conversation was open, and i still got `message:new` for a
+  group nobody had opened. So one socket gives me everything i am a member of, and the
+  sidebar can update from the same event as the open chat.
+
+#### `conversation:updated`
+
+Fires on group create and on rename, and it goes to **every member including the person
+who did it**. The payload is the whole conversation.
+
+```json
+{
+  "_id": "6a892047e5d6aac97526b774",
+  "type": "group",
+  "name": "Renamed Over Socket",
+  "createdBy": "6a891845e5d6aac9752667b0",
+  "admins": ["6a891845e5d6aac9752667b0"],
+  "participants": [
+    { "_id": "...", "name": "Ada", "phone": "+17775402201" },
+    { "_id": "...", "name": "Grace", "phone": "+17775402202" }
+  ]
+}
+```
+
+Note it has `_id` here, not `id`, so the two events do not even agree with each other. It
+also has **no `lastMessage` and no `updatedAt`**, which the conversation list entries do
+have. So i can not drop this straight into the sidebar cache either, i merge it into the
+existing entry instead of replacing it.
+
+#### `message:send` over the socket
+
+The ack comes back as `{ "ok": true }`. That is all. No id, no `createdAt`, not the
+created message.
+
+Together with the fact that there is no sender echo, this means that if i send over the
+socket i get **nothing back that identifies the message**. So i send over `POST /messages`
+instead, which does return the created message, and i use the socket only for receiving.
+It also keeps sending working while the socket is down.
+
+#### Reconnect
+
+**Nothing is replayed.** i disconnected B, sent a message from A, then reconnected B, and
+B received no events at all. C, who stayed connected, got it normally.
+
+So a reconnect is a hole in the history. After the socket comes back the client has to
+refetch the open conversation and the conversation list, and merge, otherwise the user is
+just missing messages with no sign that anything went wrong.
 
 ## Redesign notes
 
@@ -699,6 +774,9 @@ against the api as it is.
 | 9 | no demote admin endpoint | add `DELETE /conversations/{id}/admins/{userId}` | Promote with no undo |
 | 10 | `_id`, `conversation` | `id`, `conversationId` | Do not leak the database naming |
 | 11 | no unread count | add one to `GET /conversations` | Every chat sidebar needs it and the client can not do it properly alone |
+| 12 | socket sends `id` and an epoch number, REST sends `_id` and an ISO string | one message shape on both transports | The same message arriving two ways should not need normalising first |
+| 13 | `message:send` acks `{ok:true}` | ack with the created message | As it is, sending over the socket tells you nothing about what you sent |
+| 14 | nothing is replayed after a reconnect | a `since` parameter on the history endpoint | A dropped connection silently loses messages right now |
 
 ## Flows
 

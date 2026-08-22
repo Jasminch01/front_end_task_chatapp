@@ -93,9 +93,37 @@ leaving a group also removes you from `admins`. Every one of them returns the wh
 updated conversation so the client can use the response directly. If the rest of the api
 behaved like this section there would be almost nothing on this list.
 
-**What i have not tested.** Postman can not test socket.io properly, so the realtime part
-is still open, and the biggest open question is whether the sender also receives their own
-`message:new` event, because that decides how an optimistic message gets reconciled.
+**The same message has two different shapes depending on how it reaches you.** Postman can
+not test socket.io, so i wrote a small node script with `socket.io-client` and connected
+three users at once. Over REST a message is `{"_id": "...", "createdAt":
+"2026-08-22T04:06:45.319Z"}`. The exact same message over the socket is `{"id": "...",
+"createdAt": 1787371605319}`. Different id field, and a number instead of an ISO string.
+That quietly breaks the two things a chat list does most: merging by `_id` does nothing
+for a socket message because it has no `_id`, and sorting by `createdAt` ends up comparing
+a string with a number. i normalise every message at the api boundary, `id ?? _id` and
+`createdAt` always turned into a Date, before anything else in the app sees it. To make it
+worse the other event, `conversation:updated`, uses `_id` again, so the two events do not
+even agree with each other.
+
+**Sending over the socket tells you nothing.** The `message:send` ack is `{ok: true}`, no
+id and no timestamp, and the sender does not receive their own `message:new` either, i
+confirmed that with two clients connected. So if i send over the socket i have no way to
+match the message i sent to the message that was stored. That is why i send with
+`POST /messages`, which returns the created message, and use the socket only for
+receiving. It also means sending still works when the socket is down.
+
+**A reconnect loses messages silently.** i disconnected one client, sent a message from
+another, then reconnected, and the reconnected client received nothing. The client that
+stayed connected got it normally. Nothing is replayed and there is no `since` parameter to
+catch up with. So when the socket comes back i refetch the open conversation and the
+conversation list and merge them, otherwise the user is just missing messages with no sign
+anything went wrong. This is the part that separates realtime that works in a demo from
+realtime that survives a laptop lid closing.
+
+One good thing on this side: events are per user, not per conversation. There is no join
+or subscribe call, and i still received `message:new` for a group nobody had opened. So a
+single socket gives me everything i am a member of, and the sidebar and the open chat can
+update from the same event.
 
 ## Assumptions
 
