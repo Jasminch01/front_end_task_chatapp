@@ -6,7 +6,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, RefreshCw, Settings2, Users } from "lucide-react";
+import { ArrowLeft, RefreshCw, Settings2, UserPlus, Users } from "lucide-react";
 import { useConversation, useMessages } from "@/hooks/use-chat";
 import { useAuth } from "@/lib/auth";
 import { toUserMessage } from "@/lib/api/errors";
@@ -20,7 +20,7 @@ export function ChatPanel({ conversationId }: { conversationId: string }) {
   const { user } = useAuth();
   const conversation = useConversation(conversationId);
   const captureAnchorRef = useRef<(() => void) | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
+  const [settingsIntent, setSettingsIntent] = useState<"details" | "add" | null>(null);
 
   const {
     messages,
@@ -44,6 +44,7 @@ export function ChatPanel({ conversationId }: { conversationId: string }) {
   if (!user) return null;
 
   const isGroup = conversation?.type === "group";
+  const isGroupAdmin = isGroup && !!conversation && conversation.adminIds.includes(user.id);
   const subtitle = isGroup
     ? `${conversation?.participants.length ?? 0} members`
     : conversation?.participants[0]?.phone;
@@ -81,10 +82,22 @@ export function ChatPanel({ conversationId }: { conversationId: string }) {
           )}
         </div>
 
+        {isGroupAdmin && (
+          <button
+            type="button"
+            onClick={() => setSettingsIntent("add")}
+            aria-label="Add people"
+            title="Add people"
+            className="rounded-lg p-2 text-foreground-muted transition hover:bg-surface-muted hover:text-foreground"
+          >
+            <UserPlus className="size-4" />
+          </button>
+        )}
+
         {isGroup && conversation && (
           <button
             type="button"
-            onClick={() => setShowSettings(true)}
+            onClick={() => setSettingsIntent("details")}
             aria-label="Group details"
             className="rounded-lg p-2 text-foreground-muted transition hover:bg-surface-muted hover:text-foreground"
           >
@@ -159,10 +172,11 @@ export function ChatPanel({ conversationId }: { conversationId: string }) {
         onSend={send}
       />
 
-      {showSettings && conversation && (
+      {settingsIntent && conversation && (
         <GroupSettingsSheet
           conversation={conversation}
-          onClose={() => setShowSettings(false)}
+          initialFocus={settingsIntent === "add" ? "add" : undefined}
+          onClose={() => setSettingsIntent(null)}
         />
       )}
     </section>

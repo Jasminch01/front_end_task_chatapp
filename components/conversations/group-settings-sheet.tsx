@@ -1,19 +1,6 @@
 "use client";
 
-/**
- * Group management: rename, members, add, remove, promote, leave.
- *
- * Two things the API forces on this UI:
- *   - There is no demote endpoint, so promotion is a one-way door. The confirmation
- *     says so, rather than letting the user find out afterwards.
- *   - Leaving and being removed are the same DELETE call with your own id — but they
- *     are very different actions to a person, so leaving is confirmed separately.
- *
- * Admin-only actions are hidden for non-admins, and the API still enforces it with a
- * 403 if anything slips through.
- */
-
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, LoaderCircle, LogOut, Pencil, Search, Shield, UserPlus, X } from "lucide-react";
@@ -21,6 +8,7 @@ import { conversations, users } from "@/lib/api/endpoints";
 import { queryKeys } from "@/lib/query-keys";
 import { toUserMessage } from "@/lib/api/errors";
 import { useAuth } from "@/lib/auth";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Avatar } from "@/components/chat/avatar";
 import type { Conversation } from "@/types/chat";
 
@@ -29,13 +17,16 @@ const MIN_QUERY = 2;
 export function GroupSettingsSheet({
   conversation,
   onClose,
+  initialFocus,
 }: {
   conversation: Conversation;
   onClose: () => void;
+  initialFocus?: "add";
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { confirm, dialog, isOpen } = useConfirm();
 
   const isAdmin = !!user && conversation.adminIds.includes(user.id);
 
@@ -45,6 +36,7 @@ export function GroupSettingsSheet({
   const [debounced, setDebounced] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const addInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(term.trim()), 280);
@@ -52,10 +44,16 @@ export function GroupSettingsSheet({
   }, [term]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    if (initialFocus === "add" && isAdmin) addInputRef.current?.focus();
+  }, [initialFocus, isAdmin]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isOpen) onClose();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, isOpen]);
 
   const hasRegexChar = /[+*?()[\]{}\\^$|]/.test(debounced);
   const memberIds = new Set(conversation.participants.map((p) => p.id));
@@ -81,8 +79,13 @@ export function GroupSettingsSheet({
 
   async function leave() {
     if (!user) return;
-    if (!window.confirm(`Leave “${conversation.title}”? You'll stop receiving messages.`))
-      return;
+    const ok = await confirm({
+      title: `Leave “${conversation.title}”?`,
+      message: "You'll stop receiving messages from this group.",
+      confirmLabel: "Leave group",
+      tone: "danger",
+    });
+    if (!ok) return;
 
     await run("leave", () => conversations.removeParticipant(conversation.id, user.id));
     onClose();
@@ -90,13 +93,24 @@ export function GroupSettingsSheet({
   }
 
   async function promote(userId: string, personName: string) {
-    if (
-      !window.confirm(
-        `Make ${personName} an admin? This can't be undone — the API has no way to remove admin rights.`,
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: `Make ${personName} an admin?`,
+      message: "This can't be undone — the API has no way to remove admin rights.",
+      confirmLabel: "Make admin",
+    });
+    if (!ok) return;
     await run(`promote-${userId}`, () => conversations.promoteAdmin(conversation.id, userId));
+  }
+
+  async function removeMember(userId: string, personName: string) {
+    const ok = await confirm({
+      title: `Remove ${personName}?`,
+      message: "They'll be taken out of this group.",
+      confirmLabel: "Remove",
+      tone: "danger",
+    });
+    if (!ok) return;
+    await run(`remove-${userId}`, () => conversations.removeParticipant(conversation.id, userId));
   }
 
   return (
@@ -125,7 +139,6 @@ export function GroupSettingsSheet({
         </header>
 
         <div className="thin-scrollbar flex-1 overflow-y-auto">
-          {/* ------------------------------------------------------------ name */}
           <section className="border-b border-border px-4 py-4">
             {renaming ? (
               <div className="flex items-center gap-2">
@@ -180,7 +193,6 @@ export function GroupSettingsSheet({
             )}
           </section>
 
-          {/* --------------------------------------------------------- add member */}
           {isAdmin && (
             <section className="border-b border-border px-4 py-4">
               <p className="mb-2 flex items-center gap-1.5 text-sm font-medium">
@@ -190,6 +202,7 @@ export function GroupSettingsSheet({
               <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
                 <Search className="size-4 shrink-0 text-foreground-muted" />
                 <input
+                  ref={addInputRef}
                   value={term}
                   onChange={(e) => setTerm(e.target.value)}
                   placeholder="Search by name…"
@@ -227,7 +240,6 @@ export function GroupSettingsSheet({
             </section>
           )}
 
-          {/* ----------------------------------------------------------- members */}
           <section className="px-4 py-4">
             <p className="mb-2 text-sm font-medium">Members</p>
             <ul className="flex flex-col">
@@ -274,11 +286,7 @@ export function GroupSettingsSheet({
                         )}
                         <button
                           type="button"
-                          onClick={() =>
-                            run(`remove-${person.id}`, () =>
-                              conversations.removeParticipant(conversation.id, person.id),
-                            )
-                          }
+                          onClick={() => removeMember(person.id, person.name)}
                           className="rounded-md px-1.5 py-1 text-xs text-danger transition hover:bg-danger/10"
                         >
                           Remove
@@ -313,6 +321,7 @@ export function GroupSettingsSheet({
           </button>
         </footer>
       </div>
+      {dialog}
     </div>
   );
 }
