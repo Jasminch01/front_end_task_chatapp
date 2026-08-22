@@ -1,20 +1,53 @@
 @import "tailwindcss";
 
+/* Warm paper against near-black ink, one saturated accent doing all the work:
+   the send button, unread dots, focus rings, and the outgoing bubble. */
+
 :root {
   --background: #fbfaf8;
+  --surface: #ffffff;
+  --surface-muted: #f2f0ec;
+  --border: #e5e1da;
+
   --foreground: #17161a;
+  --foreground-muted: #6f6b64;
+
+  --accent: #4f46e5;
+  --accent-foreground: #ffffff;
+
+  --danger: #b42318;
+  --success: #067647;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0b0b0f;
+    --surface: #15151c;
+    --surface-muted: #1d1d26;
+    --border: #282833;
+
     --foreground: #eceaf0;
+    --foreground-muted: #9793a1;
+
+    --accent: #7c74ff;
+    --accent-foreground: #0b0b0f;
+
+    --danger: #f97066;
+    --success: #47cd89;
   }
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
 
   --font-display: var(--font-display);
   --font-sans: var(--font-sans);
@@ -24,4 +57,27 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Timestamps and phone numbers must not jitter as digits change. */
+time,
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The message list scrolls a lot — keep the scrollbar from shouting. */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

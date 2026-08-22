@@ -1,9 +1,14 @@
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Conversation",
-};
+import { use } from "react";
+import { ChatPanel } from "@/components/chat/chat-panel";
 
-export default function ConversationPage() {
-  return <div className="flex flex-1 flex-col" />;
+/** `params` is async in this version of Next, so it is unwrapped with `use()`. */
+export default function ConversationPage({
+  params,
+}: {
+  params: Promise<{ conversationId: string }>;
+}) {
+  const { conversationId } = use(params);
+  return <ChatPanel conversationId={conversationId} />;
 }

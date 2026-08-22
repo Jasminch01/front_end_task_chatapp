@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function LoginPage() {
-  return <main className="flex flex-1 flex-col" />;
+  return (
+    <main className="flex flex-1 flex-col">
+      <LoginForm />
+    </main>
+  );
 }
