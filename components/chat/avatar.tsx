@@ -17,7 +17,7 @@ export function Avatar({
     <span
       aria-hidden
       style={{ backgroundColor: avatarTint(id), width: size, height: size }}
-      className="flex shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-black/70"
+      className="flex shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white"
     >
       {initials(name)}
     </span>

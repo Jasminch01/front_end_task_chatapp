@@ -47,7 +47,7 @@ export function MessageBubble({
           // `break-words` matters: a long unbroken URL otherwise blows out the column.
           "break-words whitespace-pre-wrap",
           isOwn
-            ? "rounded-br-md bg-accent text-accent-foreground"
+            ? "rounded-br-md bg-bubble-out text-bubble-out-foreground"
             : "rounded-bl-md border border-border bg-surface text-foreground",
           pending ? "opacity-70" : "",
           failed ? "border-danger/50 bg-danger/10 text-foreground" : "",

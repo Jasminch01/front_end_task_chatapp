@@ -50,7 +50,8 @@ export function avatarTint(id: string): string {
   const hues = [255, 190, 150, 20, 330, 280, 95];
   let sum = 0;
   for (let i = 0; i < id.length; i++) sum += id.charCodeAt(i);
-  return `oklch(0.72 0.13 ${hues[sum % hues.length]})`;
+  // L=0.55 keeps white initials above 4.3:1 on every hue in the set.
+  return `oklch(0.55 0.15 ${hues[sum % hues.length]})`;
 }
 
 export function initials(name: string): string {

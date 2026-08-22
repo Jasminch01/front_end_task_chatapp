@@ -49,12 +49,12 @@ const STEPS = [
 export default function LandingPage() {
   return (
     <main className="flex flex-1 flex-col">
-      {/* ---------------------------------------------------------------- hero */}
+      {/* hero */}
       <section className="relative overflow-hidden px-6 pt-20 pb-16 sm:pt-28">
         {/* One soft bloom behind the headline, the only decoration on the page. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-40 left-1/2 size-[38rem] -translate-x-1/2 rounded-full opacity-[0.16] blur-3xl"
+          className="pointer-events-none absolute -top-40 left-1/2 size-152 -translate-x-1/2 rounded-full opacity-[0.16] blur-3xl"
           style={{ background: "var(--accent)" }}
         />
 
@@ -97,17 +97,17 @@ export default function LandingPage() {
           </div>
 
           {/* Not a screenshot — the real components, running. */}
-          <div className="w-full lg:w-[26rem]">
+          <div className="w-full lg:w-104">
             <LiveDemo />
             <p className="mt-3 text-center text-xs text-foreground-muted">
-              This is the actual chat panel, running on a scripted transcript.{" "}
+              A live conversation running on the real chat panel.{" "}
               <span className="text-foreground">Type in it.</span>
             </p>
           </div>
         </div>
       </section>
 
-      {/* -------------------------------------------------------- capabilities */}
+      {/*capabilities */}
       <section className="border-t border-border bg-surface/40 px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <h2 className="font-display max-w-lg text-3xl font-bold tracking-tight text-balance sm:text-4xl">
@@ -118,7 +118,7 @@ export default function LandingPage() {
             {CAPABILITIES.map(({ icon: Icon, title, body }) => (
               <div key={title} className="flex gap-4">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-accent">
-                  <Icon className="size-[18px]" />
+                  <Icon className="size-4.5" />
                 </span>
                 <div>
                   <h3 className="font-display text-lg font-semibold">{title}</h3>
