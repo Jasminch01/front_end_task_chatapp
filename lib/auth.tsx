@@ -26,7 +26,7 @@ import { setApiToken } from "@/lib/api/client";
 import { closeSocket } from "@/lib/socket";
 import type { User } from "@/types/chat";
 
-const STORAGE_KEY = "pulse.token";
+const STORAGE_KEY = "yap.token";
 
 type AuthStatus = "loading" | "authenticated" | "anonymous";
 

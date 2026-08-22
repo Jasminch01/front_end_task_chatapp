@@ -14,7 +14,7 @@
  * first thing I'd want added to the API.
  */
 
-const STORAGE_KEY = "pulse.lastRead";
+const STORAGE_KEY = "yap.lastRead";
 
 type ReadMap = Record<string, number>;
 

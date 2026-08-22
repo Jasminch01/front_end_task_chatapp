@@ -23,12 +23,12 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Pulse — conversations that keep up",
-    template: "%s · Pulse",
+    default: "yap — conversations that keep up",
+    template: "%s · yap",
   },
   description:
     "A real-time chat client for one-to-one and group conversations. Sign in with a phone number and start talking.",
-  applicationName: "Pulse",
+  applicationName: "yap",
 };
 
 export const viewport: Viewport = {

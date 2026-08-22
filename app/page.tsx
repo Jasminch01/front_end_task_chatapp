@@ -9,13 +9,7 @@ import {
   Zap,
 } from "lucide-react";
 import { LiveDemo } from "@/components/landing/live-demo";
-
-/**
- * Part 2 — the landing page.
- *
- * Server component: no session, no data, so it ships almost no JS. The only client
- * island is the live demo, which is the point of the page.
- */
+import { Logo } from "@/components/brand/logo";
 
 const CAPABILITIES = [
   {
@@ -70,7 +64,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="mt-6 max-w-md text-lg leading-relaxed text-foreground-muted text-pretty">
-              Pulse is a chat client built around the part everyone gets wrong — the
+              yap is a chat client built around the part everyone gets wrong — the
               message list. Live delivery, sends that survive a dropped connection, and a
               scroll position that respects where you actually are.
             </p>
@@ -166,7 +160,7 @@ export default function LandingPage() {
             href="/login"
             className="group mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-7 font-medium text-accent-foreground transition hover:opacity-90"
           >
-            Open Pulse
+            Open yap
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
@@ -176,7 +170,10 @@ export default function LandingPage() {
       <footer className="border-t border-border px-6 py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
           <div>
-            <p className="font-display text-lg font-semibold">Pulse</p>
+            <span className="flex items-center gap-2">
+              <Logo size={22} />
+              <span className="font-display text-lg font-semibold">yap</span>
+            </span>
             <p className="mt-1 text-sm text-foreground-muted">
               Built as a take-home. Set in Bricolage Grotesque and Plus Jakarta Sans.
             </p>

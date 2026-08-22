@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth";
 import { messageTime, dayLabel } from "@/lib/format";
 import { isRecentlyActive, isUnread, unreadStore } from "@/lib/unread";
 import { Avatar } from "./avatar";
+import { Logo } from "@/components/brand/logo";
 import { NewChatDialog } from "@/components/conversations/new-chat-dialog";
 import { NewGroupDialog } from "@/components/conversations/new-group-dialog";
 
@@ -81,7 +82,10 @@ export function ConversationSidebar() {
     >
       {/* ------------------------------------------------------------- header */}
       <header className="flex items-center gap-1 border-b border-border px-4 py-3">
-        <p className="font-display flex-1 text-xl leading-tight font-bold tracking-tight">Pulse</p>
+        <span className="flex flex-1 items-center gap-2">
+          <Logo size={26} />
+          <span className="font-display text-xl leading-tight font-bold tracking-tight">yap</span>
+        </span>
         <button
           type="button"
           onClick={() => setShowNewChat(true)}

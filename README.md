@@ -1,4 +1,4 @@
-# Pulse — Chat App Take-Home
+# yap — Chat App Take-Home
 
 ## Live demos
 
