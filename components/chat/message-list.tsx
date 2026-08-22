@@ -1,10 +1,5 @@
 "use client";
 
-/**
- * The scroll container: day dividers, sender groups, older-page loading, and the
- * auto-scroll contract from useStickToBottom.
- */
-
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowDown, LoaderCircle } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
@@ -50,10 +45,8 @@ export function MessageList({
   const lastCountRef = useRef(0);
   const lastIdRef = useRef<string | null>(null);
 
-  // State, not a ref: the pill has to re-render as the count climbs.
   const [unseen, setUnseen] = useState(0);
 
-  // Expose the anchor capture so the panel can call it before prepending.
   useEffect(() => {
     captureAnchorRef.current = captureAnchor;
   }, [captureAnchor, captureAnchorRef]);
@@ -62,7 +55,6 @@ export function MessageList({
     jumpOnFirstContent(messages.length > 0);
   }, [messages.length, jumpOnFirstContent]);
 
-  // The rule: follow the latest only when the user is already at the bottom.
   useEffect(() => {
     if (messages.length === 0) return;
 
@@ -79,14 +71,10 @@ export function MessageList({
       scrollToBottom("smooth");
       setUnseen(0);
     } else {
-      // Scrolled up and reading — do not move them. The pill offers the way back.
       setUnseen((n) => n + 1);
     }
   }, [messages, pinnedRef, scrollToBottom]);
 
-  /*
-   * Anchor restore runs only on a genuine prepend. Detecting it by the first message id
-   */
   const firstId = messages[0]?.id ?? null;
   const prevFirstIdRef = useRef(firstId);
   useLayoutEffect(() => {
@@ -95,7 +83,6 @@ export function MessageList({
     restoreAnchor();
   }, [firstId, restoreAnchor]);
 
-  // Load older pages when the top comes into view.
   useEffect(() => {
     const sentinel = topSentinel.current;
     const root = containerRef.current;
@@ -106,7 +93,6 @@ export function MessageList({
         if (!entry.isIntersecting || isLoadingOlder) return;
         captureAnchor();
         const loaded = await onLoadOlder();
-        // Nothing was prepended — drop the anchor so it can't fire later.
         if (!loaded) clearAnchor();
       },
       { root, rootMargin: "120px 0px 0px 0px" },
@@ -123,10 +109,8 @@ export function MessageList({
     <div className="relative flex min-h-0 flex-1">
       <div
         ref={containerRef}
-        className="thin-scrollbar flex-1 overflow-y-auto overscroll-contain"
+        className="thin-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain"
       >
-        {/* `justify-end` keeps a short conversation resting on the composer rather
-            than floating at the top of an empty column. */}
         <div className="flex min-h-full flex-col justify-end px-4 py-4 sm:px-6">
           <div ref={topSentinel} aria-hidden />
 
@@ -149,7 +133,6 @@ export function MessageList({
             </p>
           )}
 
-          {/* Announced politely so arriving messages don't steal focus from the composer. */}
           <ul aria-live="polite" aria-relevant="additions" className="flex flex-col gap-0.5">
             {messages.map((message, index) => {
               const previous = messages[index - 1];
@@ -182,7 +165,6 @@ export function MessageList({
                     <MessageBubble
                       message={message}
                       isOwn={isOwn}
-                      // A name only helps in a group; in a 1-to-1 it's noise.
                       senderName={
                         isGroup && !isOwn && newGroup
                           ? (nameById.get(message.senderId) ?? "Someone")
@@ -200,7 +182,6 @@ export function MessageList({
         </div>
       </div>
 
-      {/* Shown only when the user has scrolled away from the bottom. */}
       {!isPinned && (
         <button
           type="button"

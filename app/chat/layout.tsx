@@ -1,9 +1,5 @@
 "use client";
 
-/**
- * The chat shell.
- */
-
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
@@ -21,8 +17,6 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
     if (status === "anonymous") router.replace("/login");
   }, [status, router]);
 
-  // "loading" and "anonymous" are different states. Rendering the shell during the
-  // token check would flash the login screen on every refresh.
   if (status !== "authenticated") {
     return (
       <div className="flex flex-1 items-center justify-center">
@@ -33,7 +27,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden">
       <ConnectionBanner status={connection} />
       <div className="flex min-h-0 flex-1">
         <ConversationSidebar />
