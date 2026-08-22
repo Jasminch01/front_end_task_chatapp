@@ -5,7 +5,7 @@
  * auto-scroll contract from useStickToBottom.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowDown, LoaderCircle } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { dayLabel, startsNewDay, startsNewGroup } from "@/lib/format";
@@ -41,6 +41,8 @@ export function MessageList({
     pinnedRef,
     scrollToBottom,
     captureAnchor,
+    clearAnchor,
+    restoreAnchor,
     jumpOnFirstContent,
   } = useStickToBottom();
 
@@ -82,6 +84,17 @@ export function MessageList({
     }
   }, [messages, pinnedRef, scrollToBottom]);
 
+  /*
+   * Anchor restore runs only on a genuine prepend. Detecting it by the first message id
+   */
+  const firstId = messages[0]?.id ?? null;
+  const prevFirstIdRef = useRef(firstId);
+  useLayoutEffect(() => {
+    if (prevFirstIdRef.current === firstId) return;
+    prevFirstIdRef.current = firstId;
+    restoreAnchor();
+  }, [firstId, restoreAnchor]);
+
   // Load older pages when the top comes into view.
   useEffect(() => {
     const sentinel = topSentinel.current;
@@ -92,14 +105,16 @@ export function MessageList({
       async ([entry]) => {
         if (!entry.isIntersecting || isLoadingOlder) return;
         captureAnchor();
-        await onLoadOlder();
+        const loaded = await onLoadOlder();
+        // Nothing was prepended — drop the anchor so it can't fire later.
+        if (!loaded) clearAnchor();
       },
       { root, rootMargin: "120px 0px 0px 0px" },
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, isLoadingOlder, onLoadOlder, captureAnchor, containerRef]);
+  }, [hasMore, isLoadingOlder, onLoadOlder, captureAnchor, clearAnchor, containerRef]);
 
   const isGroup = conversation?.type === "group";
   const nameById = new Map(conversation?.participants.map((p) => [p.id, p.name]) ?? []);
@@ -113,75 +128,75 @@ export function MessageList({
         {/* `justify-end` keeps a short conversation resting on the composer rather
             than floating at the top of an empty column. */}
         <div className="flex min-h-full flex-col justify-end px-4 py-4 sm:px-6">
-        <div ref={topSentinel} aria-hidden />
+          <div ref={topSentinel} aria-hidden />
 
-        {hasMore && (
-          <div className="flex justify-center py-2 text-xs text-foreground-muted">
-            {isLoadingOlder ? (
-              <span className="flex items-center gap-1.5">
-                <LoaderCircle className="size-3 animate-spin" />
-                Loading earlier messages
-              </span>
-            ) : (
-              <span>Scroll up for earlier messages</span>
-            )}
-          </div>
-        )}
+          {hasMore && (
+            <div className="flex justify-center py-2 text-xs text-foreground-muted">
+              {isLoadingOlder ? (
+                <span className="flex items-center gap-1.5">
+                  <LoaderCircle className="size-3 animate-spin" />
+                  Loading earlier messages
+                </span>
+              ) : (
+                <span>Scroll up for earlier messages</span>
+              )}
+            </div>
+          )}
 
-        {!hasMore && messages.length > 0 && (
-          <p className="py-2 text-center text-xs text-foreground-muted">
-            This is the beginning of your conversation
-          </p>
-        )}
+          {!hasMore && messages.length > 0 && (
+            <p className="py-2 text-center text-xs text-foreground-muted">
+              This is the beginning of your conversation
+            </p>
+          )}
 
-        {/* Announced politely so arriving messages don't steal focus from the composer. */}
-        <ul aria-live="polite" aria-relevant="additions" className="flex flex-col gap-0.5">
-          {messages.map((message, index) => {
-            const previous = messages[index - 1];
-            const next = messages[index + 1];
-            const isOwn = message.senderId === currentUserId;
+          {/* Announced politely so arriving messages don't steal focus from the composer. */}
+          <ul aria-live="polite" aria-relevant="additions" className="flex flex-col gap-0.5">
+            {messages.map((message, index) => {
+              const previous = messages[index - 1];
+              const next = messages[index + 1];
+              const isOwn = message.senderId === currentUserId;
 
-            const newDay = startsNewDay(message.createdAt, previous?.createdAt);
-            const newGroup = startsNewGroup(
-              message.senderId,
-              message.createdAt,
-              previous?.senderId,
-              previous?.createdAt,
-            );
-            const lastOfGroup =
-              !next ||
-              startsNewGroup(next.senderId, next.createdAt, message.senderId, message.createdAt);
+              const newDay = startsNewDay(message.createdAt, previous?.createdAt);
+              const newGroup = startsNewGroup(
+                message.senderId,
+                message.createdAt,
+                previous?.senderId,
+                previous?.createdAt,
+              );
+              const lastOfGroup =
+                !next ||
+                startsNewGroup(next.senderId, next.createdAt, message.senderId, message.createdAt);
 
-            return (
-              <div key={message.id} className="contents">
-                {newDay && (
-                  <li className="my-3 flex items-center gap-3 px-1" role="separator">
-                    <span className="h-px flex-1 bg-border" />
-                    <span className="text-[11px] font-medium tracking-wide text-foreground-muted uppercase">
-                      {dayLabel(message.createdAt)}
-                    </span>
-                    <span className="h-px flex-1 bg-border" />
-                  </li>
-                )}
-                <div className={newGroup && !newDay ? "mt-2.5 contents" : "contents"}>
-                  <MessageBubble
-                    message={message}
-                    isOwn={isOwn}
-                    // A name only helps in a group; in a 1-to-1 it's noise.
-                    senderName={
-                      isGroup && !isOwn && newGroup
-                        ? (nameById.get(message.senderId) ?? "Someone")
-                        : undefined
-                    }
-                    showTime={lastOfGroup}
-                    onRetry={onRetry}
-                    onDiscard={onDiscard}
-                  />
+              return (
+                <div key={message.id} className="contents">
+                  {newDay && (
+                    <li className="my-3 flex items-center gap-3 px-1" role="separator">
+                      <span className="h-px flex-1 bg-border" />
+                      <span className="text-[11px] font-medium tracking-wide text-foreground-muted uppercase">
+                        {dayLabel(message.createdAt)}
+                      </span>
+                      <span className="h-px flex-1 bg-border" />
+                    </li>
+                  )}
+                  <div className={newGroup && !newDay ? "mt-2.5 contents" : "contents"}>
+                    <MessageBubble
+                      message={message}
+                      isOwn={isOwn}
+                      // A name only helps in a group; in a 1-to-1 it's noise.
+                      senderName={
+                        isGroup && !isOwn && newGroup
+                          ? (nameById.get(message.senderId) ?? "Someone")
+                          : undefined
+                      }
+                      showTime={lastOfGroup}
+                      onRetry={onRetry}
+                      onDiscard={onDiscard}
+                    />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </ul>
+              );
+            })}
+          </ul>
         </div>
       </div>
 

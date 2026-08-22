@@ -2,13 +2,6 @@
 
 /**
  * The chat shell.
- *
- * The sidebar lives here rather than in each page so it is not unmounted and refetched
- * every time the user switches conversation — a layout persists across its sibling
- * segments.
- *
- * The socket subscription lives here too, for the same reason: one connection for the
- * whole session, feeding both the sidebar and the open conversation.
  */
 
 import { useEffect } from "react";
@@ -40,7 +33,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex h-dvh flex-col overflow-hidden">
       <ConnectionBanner status={connection} />
       <div className="flex min-h-0 flex-1">
         <ConversationSidebar />

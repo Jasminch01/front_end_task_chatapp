@@ -1,24 +1,7 @@
 "use client";
 
-/**
- * The auto-scroll contract, isolated because it is the requirement most often got wrong:
- * follow the latest message by default, but never yank the user down when they have
- * scrolled up to read.
- *
- *   first load              jump to the bottom, no animation
- *   new message, pinned     smooth scroll
- *   new message, unpinned   do NOT scroll — the caller shows a pill instead
- *   user sends              always scroll (an explicit action implies intent)
- *   older page prepended    preserve the anchor so the view does not jump
- */
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-
-/**
- * "At the bottom" needs a tolerance, not an equality check. scrollHeight and scrollTop
- * are fractional on hi-dpi and zoomed displays, so `scrollTop + clientHeight === scrollHeight`
- * is false at the bottom often enough to break the feature silently.
- */
 const BOTTOM_TOLERANCE_PX = 80;
 
 export function useStickToBottom() {
@@ -67,12 +50,12 @@ export function useStickToBottom() {
     anchorRef.current = { scrollHeight: el.scrollHeight, scrollTop: el.scrollTop };
   }, []);
 
-  /**
-   * Restore after the older page has rendered. Prepending changes scrollHeight, so the
-   * view would otherwise jump by exactly the height of the inserted content.
-   * useLayoutEffect, not useEffect — this has to happen before paint.
-   */
-  useLayoutEffect(() => {
+
+  const clearAnchor = useCallback(() => {
+    anchorRef.current = null;
+  }, []);
+
+  const restoreAnchor = useCallback(() => {
     const el = containerRef.current;
     const anchor = anchorRef.current;
     if (!el || !anchor) return;
@@ -80,7 +63,7 @@ export function useStickToBottom() {
     const delta = el.scrollHeight - anchor.scrollHeight;
     if (delta > 0) el.scrollTop = anchor.scrollTop + delta;
     anchorRef.current = null;
-  });
+  }, []);
 
   /** Jump to the bottom the first time content exists, with no animation. */
   const jumpOnFirstContent = useCallback((hasContent: boolean) => {
@@ -111,6 +94,8 @@ export function useStickToBottom() {
     pinnedRef,
     scrollToBottom,
     captureAnchor,
+    clearAnchor,
+    restoreAnchor,
     jumpOnFirstContent,
     reset,
   };

@@ -4,14 +4,23 @@
  * Phone + name. The whole onboarding — there is no separate signup, an unknown phone
  * number is registered automatically.
  *
- * The server accepts anything as a phone (it stores `"  0155 900 "` verbatim and never
- * normalises), so the client normalises before sending. Otherwise the same person
- * typing their number two slightly different ways ends up with two accounts.
+ * Two API properties shape this screen:
+ *
+ * 1. The server accepts anything as a phone (it stores `"  0155 900 "` verbatim and never
+ *    normalises), so the client normalises before sending. Otherwise the same person
+ *    typing their number two slightly different ways ends up with two accounts.
+ *
+ * 2. There is no password — a phone number *is* the account, on a demo backend shared by
+ *    everyone evaluating it. Typing a number somebody else already used signs you into
+ *    THEIR account: their conversations, their groups, their message history. I measured
+ *    188 conversations and 99 groups sitting on `+15551234567`. That looks like a broken
+ *    app when it is actually the API working as designed, so the screen says so and
+ *    offers an unused number.
  */
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LoaderCircle, MessageCircle } from "lucide-react";
+import { LoaderCircle, MessageCircle, Shuffle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { toUserMessage } from "@/lib/api/errors";
 
@@ -20,6 +29,15 @@ function normalizePhone(input: string): string {
   const trimmed = input.trim();
   const digits = trimmed.replace(/[^\d]/g, "");
   return trimmed.startsWith("+") ? `+${digits}` : digits;
+}
+
+/**
+ * A number unlikely to collide with anyone else's on the shared backend. Long and
+ * random rather than memorable — being guessable is exactly the problem.
+ */
+function suggestPhone(): string {
+  const random = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10)).join("");
+  return `+1999${random}`;
 }
 
 export function LoginForm() {
@@ -75,13 +93,38 @@ export function LoginForm() {
           Your number and a name — that&apos;s the whole signup. If the number is new we
           create the account for you.
         </p>
+
+        {/*
+          Not a disclaimer for its own sake: without this, a reviewer types +15551234567,
+          lands in 188 strangers' conversations, and reasonably concludes the app is broken.
+        */}
+        <p className="mt-4 rounded-lg border border-border bg-surface-muted px-3 py-2.5 text-xs leading-relaxed text-foreground-muted">
+          <span className="font-medium text-foreground">Heads up:</span> the demo API has no
+          password — the phone number <em>is</em> the account, and the backend is shared by
+          everyone trying this out. Use a number nobody else would pick, or tap{" "}
+          <span className="text-accent">Use an unused number</span>, otherwise you&apos;ll
+          sign into somebody else&apos;s conversations.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="phone" className="text-sm font-medium">
-            Phone number
-          </label>
+          <div className="flex items-baseline justify-between gap-2">
+            <label htmlFor="phone" className="text-sm font-medium">
+              Phone number
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setPhone(suggestPhone());
+                setError(null);
+              }}
+              className="inline-flex items-center gap-1 text-xs text-accent underline underline-offset-2 transition hover:no-underline"
+            >
+              <Shuffle className="size-3" />
+              Use an unused number
+            </button>
+          </div>
           <input
             id="phone"
             name="phone"

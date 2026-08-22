@@ -2,18 +2,15 @@
 
 /**
  * The chat panel: header, message list, composer.
- *
- * This is the focus area of the assignment — the behavioural detail lives in
- * useStickToBottom (auto-scroll), useMessages (optimistic send, inclusive-cursor
- * pagination) and useChatSocket (live updates, reconnect gap recovery).
  */
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, RefreshCw, Settings2, Users } from "lucide-react";
 import { useConversation, useMessages } from "@/hooks/use-chat";
 import { useAuth } from "@/lib/auth";
 import { toUserMessage } from "@/lib/api/errors";
+import { markRead } from "@/lib/unread";
 import { MessageList } from "./message-list";
 import { MessageComposer } from "./message-composer";
 import { Avatar } from "./avatar";
@@ -38,6 +35,11 @@ export function ChatPanel({ conversationId }: { conversationId: string }) {
     retry,
     discard,
   } = useMessages(conversationId);
+
+  const newestAt = messages[messages.length - 1]?.createdAt?.getTime();
+  useEffect(() => {
+    markRead(conversationId, newestAt ? Math.max(newestAt, Date.now()) : Date.now());
+  }, [conversationId, newestAt]);
 
   if (!user) return null;
 
